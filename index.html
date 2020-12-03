@@ -15,7 +15,6 @@
     </head>
     <body>
         <canvas id="canvas" width="1400" height="600"></canvas>
-
         <script src="jquery-3.3.1.min.js"></script>
         <script>
 
@@ -26,21 +25,43 @@
                 self.ctx = self.canvas.getContext('2d');
 
                 self.curveMarkers = [];
+                self.movementIndex = 0;
                 self.startPoint = {
                     x : 700,
                     y : 300
                 }
                 self.endPoint = {
-                    x : 0,
-                    y : 0
+                    x : 700,
+                    y : 300
                 }
+
+                self.jumpImage = new Image();
+                self.jumpImage.src = 'clippybase.png';
                 
                 self.ProcessMouseMove = function(event) {
-                    // var canvasTop = parseInt($('#canvas').css('top'), 10);
-                    // var canvasLeft = parseInt($('#canvas').css('left'), 10);
+                    // self.endPoint.x = event.pageX;// - canvasLeft;
+                    // self.endPoint.y = event.pageY;// - canvasTop;
+                    // self.BuildCurveModel();
+                };
+
+                self.ProcessMouseClick = function(event) {
                     self.endPoint.x = event.pageX;// - canvasLeft;
                     self.endPoint.y = event.pageY;// - canvasTop;
                     self.BuildCurveModel();
+                    self.DoJump();
+                };
+
+                self.DoJump = function() {
+                    self.movementIndex++;
+                    if(self.movementIndex > self.curveMarkers.length) {
+
+                        self.startPoint.x = self.endPoint.x;
+                        self.startPoint.y = self.endPoint.y;
+                        self.curveMarkers = [];
+                        self.movementIndex = 0;
+                        return;
+                    }
+                    setTimeout(self.DoJump, 10);
                 };
 
                 self.BuildCurveModel = function() {
@@ -86,7 +107,7 @@
                             }
                         )
                     }
-                    console.log(self.curveMarkers);
+                    //console.log(self.curveMarkers);
                 };
 
                 self.Draw = function() {
@@ -112,11 +133,27 @@
 
                     self.ctx.restore();
 
+                    var imageWidth = 20
+                    var imageHeight = 40;
+                    if(self.curveMarkers.length == 0) {
+                        // got no markers then draw at the start point
+                        self.ctx.drawImage(self.jumpImage, self.startPoint.x - imageWidth / 2, self.startPoint.y - imageHeight, imageWidth, imageHeight);
+                    } else if(self.movementIndex == self.curveMarkers.length) {
+
+                        self.ctx.drawImage(self.jumpImage, self.endPoint.x - imageWidth / 2, self.endPoint.y - imageHeight, imageWidth, imageHeight);
+
+                    } else if(self.movementIndex > 0) {
+                        var currentCurveMarker = self.curveMarkers[self.movementIndex];
+
+                        self.ctx.drawImage(self.jumpImage, currentCurveMarker.lineCoordinates.x - imageWidth / 2, currentCurveMarker.lineCoordinates.y - imageHeight - currentCurveMarker.curveHeight, imageWidth, imageHeight);
+                    } else {
+                        self.ctx.drawImage(self.jumpImage, self.startPoint.x - imageWidth / 2, self.startPoint.y - imageHeight, imageWidth, imageHeight);
+                    }
                 };
 
                 self.DrawLoop = function() {
                     self.Draw();
-                    setTimeout(self.DrawLoop, 100);
+                    setTimeout(self.DrawLoop, 10);
                 }
                 self.DrawLoop();
             };
@@ -124,6 +161,9 @@
 
             $("#canvas").on("mousemove", function(event) {
                 jumpModel.ProcessMouseMove(event);
+            });
+            $("#canvas").on("click", function(event) {
+                jumpModel.ProcessMouseClick(event);
             });
 
         </script>
