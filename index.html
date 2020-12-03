@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Jump path calcs</title>
+        <style>
+            
+            body {
+                font-family: 'Hind Siliguri', sans-serif !important;
+            }
+            canvas {
+                border: 1px solid #d0d0d0;
+                background-color: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="canvas" width="1400" height="600"></canvas>
+
+        <script src="jquery-3.3.1.min.js"></script>
+        <script>
+
+            var JumpModel = function() {
+                var self = this;
+
+                self.canvas = document.getElementById('canvas');
+                self.ctx = self.canvas.getContext('2d');
+
+                self.curveMarkers = [];
+                self.startPoint = {
+                    x : 700,
+                    y : 300
+                }
+                self.endPoint = {
+                    x : 0,
+                    y : 0
+                }
+                
+                self.ProcessMouseMove = function(event) {
+                    // var canvasTop = parseInt($('#canvas').css('top'), 10);
+                    // var canvasLeft = parseInt($('#canvas').css('left'), 10);
+                    self.endPoint.x = event.pageX;// - canvasLeft;
+                    self.endPoint.y = event.pageY;// - canvasTop;
+                    self.BuildCurveModel();
+                };
+
+                self.BuildCurveModel = function() {
+
+                    self.curveMarkers = [];
+
+                    var chunkCount = 25;
+                    var eachChunksPercentage = 100 / chunkCount;
+                    
+                    // what angle is our line on
+                    var delta_x = self.startPoint.x - self.endPoint.x;
+                    var delta_y = self.startPoint.y - self.endPoint.y;
+                    var theta_radians = Math.atan2(delta_y, delta_x)
+
+                    var lineLength = Math.sqrt( delta_x * delta_x  + delta_y * delta_y);
+
+                    for(var currentChunk = 1; currentChunk < chunkCount; currentChunk++) {
+                        // work out where on the line the co-ordinates for this particular chunk are
+                        var currentChunkPercentage = currentChunk * eachChunksPercentage;
+                        var currentChunkLineLength = (currentChunkPercentage / 100 ) * lineLength; // this is the hypotenuse
+                        // what is the adjacent (X)
+                        var adjacent = Math.cos(theta_radians) * currentChunkLineLength;
+                        // what is the opposite (Y)
+                        var opposite = Math.sin(theta_radians) * currentChunkLineLength;
+
+                        var lineCoordinates = {
+                                    x : self.startPoint.x - adjacent,
+                                    y : self.startPoint.y - opposite
+                                };
+
+                        // work out how far above the lineCoordinates the curve is at this point on the line
+                        // get a percentage of PI, based on how far along the line we currently are
+                        var piPercent = Math.PI * ((currentChunk * eachChunksPercentage) / 100);
+                        var curveHeight = Math.sin(piPercent);
+                        var jumpBooster = 100;
+                        curveHeight = curveHeight * jumpBooster;
+
+                        self.curveMarkers.push(
+                            {
+                                index: currentChunk, 
+                                lineCoordinates : lineCoordinates,
+                                curveHeight: curveHeight
+                            }
+                        )
+                    }
+                    console.log(self.curveMarkers);
+                };
+
+                self.Draw = function() {
+                    self.ctx.clearRect(0, 0, self.canvas.width, self.canvas.height);
+
+                    self.ctx.save();
+                    self.ctx.beginPath();
+                    self.ctx.strokeStyle = "#FF0000";
+                    self.ctx.moveTo(self.startPoint.x, self.startPoint.y);
+                    self.ctx.lineTo(self.endPoint.x, self.endPoint.y);
+                    self.ctx.stroke();
+                    self.ctx.restore();
+
+                    self.ctx.save();
+                    for(var i = 0; i < self.curveMarkers.length; i++) {
+                        var drawX = self.curveMarkers[i].lineCoordinates.x;
+                        var drawY = self.curveMarkers[i].lineCoordinates.y;
+                        self.ctx.font = '10px serif';
+                        self.ctx.fillText(i+1, drawX, drawY);
+
+                        self.ctx.fillText("*", drawX, drawY - self.curveMarkers[i].curveHeight);
+                    }
+
+                    self.ctx.restore();
+
+                };
+
+                self.DrawLoop = function() {
+                    self.Draw();
+                    setTimeout(self.DrawLoop, 100);
+                }
+                self.DrawLoop();
+            };
+            var jumpModel = new JumpModel();
+
+            $("#canvas").on("mousemove", function(event) {
+                jumpModel.ProcessMouseMove(event);
+            });
+
+        </script>
+    </body>
+</html>
